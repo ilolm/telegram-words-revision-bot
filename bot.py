@@ -27,11 +27,11 @@ dp = Dispatcher(storage=MemoryStorage())
 # --- KEYBOARD ---
 main_kb = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="➕ Добавить кучку")],
-        [KeyboardButton(text="📚 Сегодня повторить")],
-        [KeyboardButton(text="📦 Все кучки")],
-        [KeyboardButton(text="🗑 Удалить кучку")],
-        [KeyboardButton(text="❓ Помощь")]
+        [KeyboardButton(text="➕ Add deck")],
+        [KeyboardButton(text="📚 Review today")],
+        [KeyboardButton(text="📦 All decks")],
+        [KeyboardButton(text="🗑 Delete deck")],
+        [KeyboardButton(text="❓ Help")]
     ],
     resize_keyboard=True
 )
@@ -59,14 +59,14 @@ async def init_db():
 # --- START ---
 @dp.message(CommandStart())
 async def start(message: Message):
-    await message.answer("👋 Привет! Выбери действие:", reply_markup=main_kb)
+    await message.answer("👋 Hi! Choose an action:", reply_markup=main_kb)
 
 
 # --- ADD ---
-@dp.message(F.text == "➕ Добавить кучку")
+@dp.message(F.text == "➕ Add deck")
 async def add_start(message: Message, state: FSMContext):
     await state.set_state(AddDeck.waiting_name)
-    await message.answer("Напиши название кучки:")
+    await message.answer("Enter deck name:")
 
 
 @dp.message(AddDeck.waiting_name)
@@ -81,11 +81,11 @@ async def add_finish(message: Message, state: FSMContext):
         await db.commit()
 
     await state.clear()
-    await message.answer(f"✅ Добавлено: {name}", reply_markup=main_kb)
+    await message.answer(f"✅ Added: {name}", reply_markup=main_kb)
 
 
 # --- TODAY ---
-@dp.message(F.text == "📚 Сегодня повторить")
+@dp.message(F.text == "📚 Review today")
 async def today_reviews(message: Message):
     user_id = message.from_user.id
     today = date.today()
@@ -102,19 +102,19 @@ async def today_reviews(message: Message):
                 days_passed = (today - created_date).days
 
                 if days_passed in INTERVALS:
-                    result.append(f"📌 {name} — {created_at}   (день {days_passed})")
+                    result.append(f"📌 {name} — {created_at} (day {days_passed})")
 
     if not result:
-        await message.answer("🎉 Сегодня ничего повторять не нужно", reply_markup=main_kb)
+        await message.answer("🎉 Nothing to review today", reply_markup=main_kb)
     else:
         await message.answer(
-            "📚 Сегодня повторить:\n\n" + "\n".join(result),
+            "📚 Review today:\n\n" + "\n".join(result),
             reply_markup=main_kb
         )
 
 
 # --- LIST ---
-@dp.message(F.text == "📦 Все кучки")
+@dp.message(F.text == "📦 All decks")
 async def list_decks(message: Message):
     user_id = message.from_user.id
 
@@ -126,15 +126,15 @@ async def list_decks(message: Message):
             rows = await cursor.fetchall()
 
     if not rows:
-        await message.answer("Пока пусто", reply_markup=main_kb)
+        await message.answer("No decks yet", reply_markup=main_kb)
         return
 
     text = "\n".join([f"📌 {name} — {created}" for name, created in rows])
-    await message.answer("📦 Кучки:\n\n" + text, reply_markup=main_kb)
+    await message.answer("📦 Decks:\n\n" + text, reply_markup=main_kb)
 
 
 # --- DELETE MENU ---
-@dp.message(F.text == "🗑 Удалить кучку")
+@dp.message(F.text == "🗑 Delete deck")
 async def delete_menu(message: Message):
     user_id = message.from_user.id
 
@@ -146,7 +146,7 @@ async def delete_menu(message: Message):
             rows = await cursor.fetchall()
 
     if not rows:
-        await message.answer("❌ Нет кучек для удаления", reply_markup=main_kb)
+        await message.answer("❌ No decks to delete", reply_markup=main_kb)
         return
 
     keyboard = InlineKeyboardMarkup(
@@ -159,7 +159,7 @@ async def delete_menu(message: Message):
         ]
     )
 
-    await message.answer("Выбери кучку для удаления:", reply_markup=keyboard)
+    await message.answer("Select a deck to delete:", reply_markup=keyboard)
 
 
 # --- DELETE ACTION ---
@@ -175,18 +175,18 @@ async def delete_deck(callback: CallbackQuery):
         )
         await db.commit()
 
-    await callback.message.edit_text("🗑 Кучка удалена")
+    await callback.message.edit_text("🗑 Deck deleted")
     await callback.answer()
 
 
 # --- HELP ---
-@dp.message(F.text == "❓ Помощь")
+@dp.message(F.text == "❓ Help")
 async def help_cmd(message: Message):
     await message.answer(
-        "Как пользоваться:\n\n"
-        "1. Добавляешь кучку слов\n"
-        "2. Каждый день жмёшь 'Сегодня повторить'\n\n"
-        "Интервалы:\n1, 3, 7, 12, 30 дней",
+        "How to use:\n\n"
+        "1. Add a deck of words\n"
+        "2. Press 'Review today' every day\n\n"
+        "Intervals:\n1, 3, 7, 12, 30 days",
         reply_markup=main_kb
     )
 
@@ -222,13 +222,13 @@ async def send_daily_reminders():
                         days_passed = (today - created_date).days
 
                         if days_passed in INTERVALS:
-                            result.append(f"📌 {name} (день {days_passed})")
+                            result.append(f"📌 {name} (day {days_passed})")
 
             if result:
                 try:
                     await bot.send_message(
                         user_id,
-                        "⏰ Напоминание!\n\n📚 Сегодня повторить:\n\n" + "\n".join(result)
+                        "⏰ Reminder!\n\n📚 Review today:\n\n" + "\n".join(result)
                     )
                 except:
                     pass
