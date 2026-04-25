@@ -17,6 +17,8 @@ import os
 API_TOKEN = os.environ.get("TG_BOT_TOKEN")
 
 INTERVALS = [1, 4, 11, 23, 53]
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "words.db")
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
@@ -42,7 +44,7 @@ class AddDeck(StatesGroup):
 
 # --- DB ---
 async def init_db():
-    async with aiosqlite.connect("words.db") as db:
+    async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("""
         CREATE TABLE IF NOT EXISTS decks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,7 +73,7 @@ async def add_start(message: Message, state: FSMContext):
 async def add_finish(message: Message, state: FSMContext):
     name = message.text
 
-    async with aiosqlite.connect("words.db") as db:
+    async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
             "INSERT INTO decks (user_id, name, created_at) VALUES (?, ?, ?)",
             (message.from_user.id, name, date.today().isoformat())
@@ -90,7 +92,7 @@ async def today_reviews(message: Message):
 
     result = []
 
-    async with aiosqlite.connect("words.db") as db:
+    async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute(
             "SELECT name, created_at FROM decks WHERE user_id = ?",
             (user_id,)
@@ -116,7 +118,7 @@ async def today_reviews(message: Message):
 async def list_decks(message: Message):
     user_id = message.from_user.id
 
-    async with aiosqlite.connect("words.db") as db:
+    async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute(
             "SELECT name, created_at FROM decks WHERE user_id = ?",
             (user_id,)
@@ -136,7 +138,7 @@ async def list_decks(message: Message):
 async def delete_menu(message: Message):
     user_id = message.from_user.id
 
-    async with aiosqlite.connect("words.db") as db:
+    async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute(
             "SELECT id, name FROM decks WHERE user_id = ?",
             (user_id,)
@@ -166,7 +168,7 @@ async def delete_deck(callback: CallbackQuery):
     deck_id = int(callback.data.split(":")[1])
     user_id = callback.from_user.id
 
-    async with aiosqlite.connect("words.db") as db:
+    async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
             "DELETE FROM decks WHERE id = ? AND user_id = ?",
             (deck_id, user_id)
@@ -200,7 +202,7 @@ async def send_daily_reminders():
 
         await asyncio.sleep((target - now).total_seconds())
 
-        async with aiosqlite.connect("words.db") as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             async with db.execute(
                 "SELECT DISTINCT user_id FROM decks"
             ) as cursor:
@@ -210,7 +212,7 @@ async def send_daily_reminders():
             today = date.today()
             result = []
 
-            async with aiosqlite.connect("words.db") as db:
+            async with aiosqlite.connect(DB_PATH) as db:
                 async with db.execute(
                     "SELECT name, created_at FROM decks WHERE user_id = ?",
                     (user_id,)
