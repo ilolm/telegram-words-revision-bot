@@ -34,7 +34,7 @@ days_passed ∈ [1, 3, 7, 12, 30]
 sudo docker container run -itd \
     --name telegram-words-revision-bot \
     --restart unless-stopped \
-    -v ./words.db:/app/words.db
+    -v ./words.db:/app/words.db \
     -e TG_BOT_TOKEN="PASTE_YOUR_TELEGRAM_BOT_TOKEN_HERE" \
     ilolm/telegram-words-revision-bot:latest
 ```
